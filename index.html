@@ -35,45 +35,17 @@
     #scoreboard { margin: 15px; }
 
     /* Full-page themes */
-    body.classic {
-      background: #fafafa;
-      color: #222;
-    }
-    body.classic .cell {
-      background: #f0f0f0;
-      border: 2px solid #333;
-      color: #222;
-    }
+    body.classic { background: #fafafa; color: #222; }
+    body.classic .cell { background: #f0f0f0; border: 2px solid #333; color: #222; }
 
-    body.neon {
-      background: #000;
-      color: #0ff;
-    }
-    body.neon .cell {
-      background: #111;
-      border: 2px solid #0ff;
-      color: #0ff;
-    }
+    body.neon { background: #000; color: #0ff; }
+    body.neon .cell { background: #111; border: 2px solid #0ff; color: #0ff; }
 
-    body.dark {
-      background: #121212;
-      color: #eee;
-    }
-    body.dark .cell {
-      background: #222;
-      border: 2px solid #555;
-      color: #fff;
-    }
+    body.dark { background: #121212; color: #eee; }
+    body.dark .cell { background: #222; border: 2px solid #555; color: #fff; }
 
-    body.pastel {
-      background: #ffeef8;
-      color: #444;
-    }
-    body.pastel .cell {
-      background: #fff0f5;
-      border: 2px solid #f9c;
-      color: #444;
-    }
+    body.pastel { background: #ffeef8; color: #444; }
+    body.pastel .cell { background: #fff0f5; border: 2px solid #f9c; color: #444; }
   </style>
 </head>
 <body class="classic">
@@ -90,22 +62,33 @@
     <option value="dark">Dark</option>
     <option value="pastel">Pastel</option>
   </select>
+
+  <div>
+    <button onclick="createRoom()">Host Game</button>
+    <button onclick="joinRoom()">Join Game</button>
+  </div>
   
   <div id="board"></div>
   
   <div id="status">Player X's turn</div>
   <div id="scoreboard">Score: X = 0 | O = 0</div>
   
+  <!-- Socket.IO -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   <script>
     const board = document.getElementById("board");
     const status = document.getElementById("status");
     const scoreboard = document.getElementById("scoreboard");
     const themeSelector = document.getElementById("themeSelector");
-    
+
+    // Change this to your host machine's local IP (e.g., 192.168.1.5)
+    const socket = io("http://localhost:3000");
+
     let cells = [];
     let currentPlayer = "X";
     let scores = { X: 0, O: 0 };
-    
+    let roomId = null;
+
     function initBoard() {
       board.innerHTML = "";
       cells = [];
@@ -117,27 +100,32 @@
         cells.push(cell);
       }
     }
-    
+
     function makeMove(i) {
       if (cells[i].textContent === "") {
         cells[i].textContent = currentPlayer;
-        if (checkWin()) {
-          let winnerName = document.getElementById("player" + currentPlayer).value || currentPlayer;
-          status.textContent = winnerName + " wins!";
-          scores[currentPlayer]++;
-          updateScoreboard();
-          setTimeout(initBoard, 1500);
-        } else if (cells.every(c => c.textContent !== "")) {
-          status.textContent = "It's a draw!";
-          setTimeout(initBoard, 1500);
-        } else {
-          currentPlayer = currentPlayer === "X" ? "O" : "X";
-          let name = document.getElementById("player" + currentPlayer).value || currentPlayer;
-          status.textContent = name + "'s turn";
-        }
+        socket.emit("makeMove", roomId, i, currentPlayer);
+        switchTurn();
       }
     }
-    
+
+    function switchTurn() {
+      if (checkWin()) {
+        let winnerName = document.getElementById("player" + currentPlayer).value || currentPlayer;
+        status.textContent = winnerName + " wins!";
+        scores[currentPlayer]++;
+        updateScoreboard();
+        setTimeout(initBoard, 1500);
+      } else if (cells.every(c => c.textContent !== "")) {
+        status.textContent = "It's a draw!";
+        setTimeout(initBoard, 1500);
+      } else {
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        let name = document.getElementById("player" + currentPlayer).value || currentPlayer;
+        status.textContent = name + "'s turn";
+      }
+    }
+
     function checkWin() {
       const wins = [
         [0,1,2],[3,4,5],[6,7,8],
@@ -148,15 +136,42 @@
         combo.every(i => cells[i].textContent === currentPlayer)
       );
     }
-    
+
     function updateScoreboard() {
       scoreboard.textContent = `Score: X = ${scores.X} | O = ${scores.O}`;
     }
-    
+
     themeSelector.addEventListener("change", () => {
       document.body.className = themeSelector.value;
     });
-    
+
+    // Multiplayer functions
+    function createRoom() {
+      roomId = Math.random().toString(36).substring(2, 6);
+      const playerName = document.getElementById("playerX").value || "Player X";
+      socket.emit("createRoom", roomId, playerName);
+      alert("Room created! Share this ID: " + roomId);
+    }
+
+    function joinRoom() {
+      roomId = prompt("Enter room ID:");
+      const playerName = document.getElementById("playerO").value || "Player O";
+      socket.emit("joinRoom", roomId, playerName);
+    }
+
+    socket.on("roomUpdate", (room) => {
+      console.log("Room updated:", room);
+      initBoard();
+    });
+
+    socket.on("boardUpdate", (boardState) => {
+      boardState.forEach((val, i) => {
+        cells[i].textContent = val;
+      });
+    });
+
+    socket.on("errorMsg", (msg) => alert(msg));
+
     initBoard();
   </script>
 </body>
