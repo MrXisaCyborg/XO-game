@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tic Tac Toe</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
+    h1 { margin: 10px; }
+    #themeSelector {
+      margin: 10px;
+      padding: 5px;
+    }
+    #players {
+      margin: 15px;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 5px;
+      justify-content: center;
+      margin: 20px auto;
+    }
+    .cell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    #status { margin: 15px; font-weight: bold; }
+    #scoreboard { margin: 15px; }
+    
+    /* Themes */
+    body.classic .cell { background: #f0f0f0; border: 2px solid #333; }
+    body.neon .cell { background: #000; color: #0ff; border: 2px solid #0ff; }
+    body.dark .cell { background: #222; color: #fff; border: 2px solid #555; }
+    body.pastel .cell { background: #ffe; color: #444; border: 2px solid #f9c; }
+  </style>
+</head>
+<body class="classic">
+  <h1>Tic Tac Toe</h1>
+  
+  <div id="players">
+    Player X: <input id="playerX" placeholder="Name"><br><br>
+    Player O: <input id="playerO" placeholder="Name">
+  </div>
+  
+  <select id="themeSelector">
+    <option value="classic">Classic</option>
+    <option value="neon">Neon</option>
+    <option value="dark">Dark</option>
+    <option value="pastel">Pastel</option>
+  </select>
+  
+  <div id="board"></div>
+  
+  <div id="status">Player X's turn</div>
+  <div id="scoreboard">Score: X = 0 | O = 0</div>
+  
+  <script>
+    const board = document.getElementById("board");
+    const status = document.getElementById("status");
+    const scoreboard = document.getElementById("scoreboard");
+    const themeSelector = document.getElementById("themeSelector");
+    
+    let cells = [];
+    let currentPlayer = "X";
+    let scores = { X: 0, O: 0 };
+    
+    function initBoard() {
+      board.innerHTML = "";
+      cells = [];
+      for (let i = 0; i < 9; i++) {
+        const cell = document.createElement("div");
+        cell.classList.add("cell");
+        cell.addEventListener("click", () => makeMove(i));
+        board.appendChild(cell);
+        cells.push(cell);
+      }
+    }
+    
+    function makeMove(i) {
+      if (cells[i].textContent === "") {
+        cells[i].textContent = currentPlayer;
+        if (checkWin()) {
+          let winnerName = document.getElementById("player" + currentPlayer).value || currentPlayer;
+          status.textContent = winnerName + " wins!";
+          scores[currentPlayer]++;
+          updateScoreboard();
+          setTimeout(initBoard, 1500);
+        } else if (cells.every(c => c.textContent !== "")) {
+          status.textContent = "It's a draw!";
+          setTimeout(initBoard, 1500);
+        } else {
+          currentPlayer = currentPlayer === "X" ? "O" : "X";
+          let name = document.getElementById("player" + currentPlayer).value || currentPlayer;
+          status.textContent = name + "'s turn";
+        }
+      }
+    }
+    
+    function checkWin() {
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      return wins.some(combo => 
+        combo.every(i => cells[i].textContent === currentPlayer)
+      );
+    }
+    
+    function updateScoreboard() {
+      scoreboard.textContent = `Score: X = ${scores.X} | O = ${scores.O}`;
+    }
+    
+    themeSelector.addEventListener("change", () => {
+      document.body.className = themeSelector.value;
+    });
+    
+    initBoard();
+  </script>
+</body>
+</html>
